@@ -11,6 +11,53 @@
 
 biocypher_query_generation:
   # test ability to create a simple cypher query
+  - case: simple_custom_kg
+    input:
+      kg_schema: custom_kg
+      prompt: "What is the name of the disease with ICD10 code 'E10'?"
+    expected:
+      entities: ["Disease"]
+      relationships: []
+      relationship_labels: {}
+      properties:
+        Disease: ["name", "ICD10"]
+      parts_of_query:
+        [
+          "^MATCH",
+          "RETURN",
+          "([a-zA-Z]*:Disease)",
+          "WHERE [a-zA-Z]*\\.ICD10|{ICD10:",
+        ]
+
+  # test cypher query with single-word entities
+  - case: single_word_custom_kg
+    input:
+      kg_schema: custom_kg
+      prompt: "Which genes are associated with mucoviscidosis?"
+    expected:
+      entities: ["Gene", "Disease"]
+      relationships: ["GeneToPhenotypeAssociation"]
+      relationship_labels:
+        PERTURBED:
+          source: Disease
+          target: ["Protein", "Gene"]
+      properties:
+        Disease: ["name", "ICD10", "DSM5"]
+        Gene: ["id", "name"]
+        GeneToPhenotypeAssociation: ["score", "source", "evidence"]
+      parts_of_query:
+        [
+          "^MATCH",
+          "RETURN",
+          "([a-zA-Z]*:Gene)",
+          "([a-zA-Z]*:Disease)",
+          "([a-zA-Z]*)?:PERTURBED]",
+          "[Mm]ucoviscidosis",
+          "\\(.*:Gene\\)<-\\[:PERTURBED\\]-|-\\[:PERTURBED\\]->\\(.*:Gene\\)",
+          "WHERE [a-zA-Z]*\\.name|{name:",
+        ]
+
+  # test ability to create a simple cypher query
   - case: simple
     input:
       kg_schema: gene_kg
@@ -120,6 +167,7 @@ biocypher_query_generation:
           "\\(([a-zA-Z]*(:Protein)?)\\)<-\\[([a-zA-Z]*)?:GeneToProteinAssociation]-|-\\[([a-zA-Z]*)?:GeneToProteinAssociation]->\\(([a-zA-Z]*(:Protein)?)\\)",
         ]
 
+
 rag_interpretation:
   # test simple irrelevance judgement
   - case: explicit_relevance_no
@@ -216,7 +264,83 @@ rag_interpretation:
     expected:
       behaviour: "answer"
 
+
 kg_schemas:
+  custom_kg:
+    organism_taxon:
+      input_label: OrganismTaxon
+      is_relationship: false
+      present_in_knowledge_graph: true
+      properties: {}
+      represented_as: node
+    disease:
+      input_label: Disease
+      is_relationship: false
+      present_in_knowledge_graph: true
+      properties: {}
+      represented_as: node
+    gross_anatomical_structure:
+      input_label: GrossAnatomicalStructure
+      is_relationship: false
+      present_in_knowledge_graph: true
+      properties: {}
+      represented_as: node
+    anatomical_entity:
+      input_label: AnatomicalEntity
+      is_relationship: false
+      present_in_knowledge_graph: true
+      properties: {}
+      represented_as: node
+    sequence_variant:
+      input_label: SequenceVariant
+      is_relationship: false
+      present_in_knowledge_graph: true
+      properties: {}
+      represented_as: node
+    gene:
+      input_label: Gene
+      is_relationship: false
+      present_in_knowledge_graph: true
+      properties: {}
+      represented_as: node
+    protein:
+      input_label: Protein
+      is_relationship: false
+      present_in_knowledge_graph: true
+      properties: {}
+      represented_as: node
+    gene_to_expression_site_association:
+      input_label: GeneToExpressionSiteAssociation
+      is_relationship: true
+      present_in_knowledge_graph: true
+      properties: {}
+      represented_as: edge
+      source: gene
+      target: anatomical_entity
+    gene_to_disease_association:
+      input_label: GeneToDiseaseAssociation
+      is_relationship: true
+      present_in_knowledge_graph: true
+      properties: {}
+      represented_as: edge
+      source: gene
+      target: disease
+    synonymous_variant_of:
+      input_label: SynonymousVariantOf
+      is_relationship: true
+      present_in_knowledge_graph: true
+      properties: {}
+      represented_as: edge
+      source: sequence_variant
+      target: gene
+    nearby_variant_of:
+      input_label: NearbyVariantOf
+      is_relationship: true
+      present_in_knowledge_graph: true
+      properties: {}
+      represented_as: edge
+      source: sequence_variant
+      target: gene
   gene_kg:
     cell type:
       input_label: cell_type
